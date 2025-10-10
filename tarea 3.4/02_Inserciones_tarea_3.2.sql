@@ -50,7 +50,6 @@ INSERT INTO reportes (id_tipo_reporte, descripcion, fecha, hora, id_usuario, id_
 (2, 'Caída de bicicleta', '2025-10-07', '16:00:00', 2, 1, 'sistema');
 
 
-
 -- Ver todos los registros
 SELECT * FROM tipo_usuarios;
 SELECT * FROM comunas;
@@ -79,17 +78,33 @@ SELECT * FROM tipo_reporte WHERE deleted = 0;
 SELECT * FROM reportes WHERE deleted = 0;
 
 
--- Personas con datos completos (nombre, correo y teléfono)
-SELECT id_persona, nombre, correo, telefono
-FROM personas
-WHERE deleted = 0;
+-- Consulta para obtener todas las plazas activas
+-- Incluye el nombre de la comuna asociada
+-- Tablas llamadas: plazas, comunas
+SELECT p.*, c.nombre AS nombre_comuna
+FROM plazas p
+LEFT JOIN comunas c 
+    ON p.id_comuna = c.id_comuna AND c.deleted = 0
+WHERE p.deleted = 0;
 
--- Validación de CHECKs de teléfono: mostrar teléfonos inválidos
-SELECT nombre, telefono
-FROM personas
-WHERE deleted = 0 AND telefono NOT REGEXP '^[0-9]{8,15}$';
 
--- Validación de CHECKs de correo: mostrar correos inválidos
-SELECT nombre, correo
-FROM personas
-WHERE deleted = 0 AND correo IS NOT NULL AND correo NOT REGEXP '^[^@]+@[^@]+\.[^@]+$';
+-- Consulta para obtener todas las cámaras activas
+-- Incluye el nombre de la plaza y el estado de la cámara
+-- Tablas llamadas: camaras, plazas, estado_camara
+SELECT c.*, pl.nombre AS nombre_plaza, ec.nombre AS estado
+FROM camaras c
+JOIN plazas pl 
+    ON c.id_plaza = pl.id_plaza AND pl.deleted = 0
+JOIN estado_camara ec 
+    ON c.id_estado_camara = ec.id_estado_camara AND ec.deleted = 0
+WHERE c.deleted = 0;
+
+
+-- Consulta para obtener todas las personas activas
+-- Incluye el nombre de la comuna asociada
+-- Tablas llamadas: personas, comunas
+SELECT p.*, c.nombre AS nombre_comuna
+FROM personas p
+LEFT JOIN comunas c 
+    ON p.id_comuna = c.id_comuna AND c.deleted = 0
+WHERE p.deleted = 0;
