@@ -1,8 +1,8 @@
 # ==========================================
-# sp_menu_plazas.py
+# sp_menu_reportes.py
 # CRUD básico con Procedimientos Almacenados (MySQL) desde Python
-# Autor: Adaptado para plazas
-# Propósito: Insertar, listar, eliminar lógicamente y restaurar plazas
+# Autor: Adaptado para reportes
+# Propósito: Insertar, listar, eliminar lógicamente y restaurar reportes
 # utilizando procedimientos almacenados y el conector oficial de MySQL.
 # ==========================================
 
@@ -21,15 +21,16 @@ def conectar():
     return mysql.connector.connect(**DB_CONFIG)
 
 # ---------- FUNCIONES PRINCIPALES ----------
-def sp_insertar(nombre: str, direccion: str, id_comuna: int, created_by: str) -> int:
+def sp_insertar(id_tipo_reporte: int, descripcion: str, fecha: str, hora: str,
+                id_usuario: int, id_plaza: int, created_by: str) -> int:
     cnx = cur = None
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        args = [nombre, direccion, id_comuna, created_by, 0]  # OUT al final
-        args = cur.callproc("sp_insertar_plaza", args)
+        args = [id_tipo_reporte, descripcion, fecha, hora, id_usuario, id_plaza, created_by, 0]  # OUT al final
+        args = cur.callproc("sp_insertar_reporte", args)
         cnx.commit()
-        nuevo_id = args[4]
+        nuevo_id = args[7]
         print(f"✅ Insertado correctamente. Nuevo ID: {nuevo_id}")
         return nuevo_id
     except mysql.connector.Error as e:
@@ -47,14 +48,15 @@ def sp_listar_activos():
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        cur.callproc("sp_listar_plazas_activas")
-        print("=== PLAZAS ACTIVAS ===")
+        cur.callproc("sp_listar_reportes_activos")
+        print("=== REPORTES ACTIVOS ===")
         for result in cur.stored_results():
-            for (id_, nombre, direccion, id_comuna, comuna, created_by, created_at, updated_by, updated_at) in result.fetchall():
+            for (id_reporte, id_tipo_reporte, descripcion, fecha, hora, id_usuario, id_plaza,
+                 created_by, created_at, updated_by, updated_at) in result.fetchall():
                 ua = updated_at if updated_at is not None else "-"
-                comuna_name = comuna if comuna is not None else "-"
-                print(f"ID:{id_:<3} | Nombre:{nombre:<20} | Dirección:{direccion:<30} | "
-                      f"Comuna:{comuna_name:<15} | Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
+                print(f"ID:{id_reporte:<3} | Tipo:{id_tipo_reporte:<3} | Descripción:{descripcion:<30} | "
+                      f"Fecha:{fecha} | Hora:{hora} | Usuario:{id_usuario} | Plaza:{id_plaza} | "
+                      f"Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
     except mysql.connector.Error as e:
         print("❌ Error en sp_listar_activos:", e)
     finally:
@@ -66,29 +68,30 @@ def sp_listar_todos():
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        cur.callproc("sp_listar_plazas_todos")
-        print("=== PLAZAS (TODOS) ===")
+        cur.callproc("sp_listar_reportes_todos")
+        print("=== REPORTES (TODOS) ===")
         for result in cur.stored_results():
-            for (id_, nombre, direccion, id_comuna, comuna, created_by, created_at, updated_by, updated_at, deleted) in result.fetchall():
+            for (id_reporte, id_tipo_reporte, descripcion, fecha, hora, id_usuario, id_plaza,
+                 created_by, created_at, updated_by, updated_at, deleted) in result.fetchall():
                 estado = "ACTIVO" if deleted == 0 else "ELIMINADO"
                 ua = updated_at if updated_at is not None else "-"
-                comuna_name = comuna if comuna is not None else "-"
-                print(f"ID:{id_:<3} | Nombre:{nombre:<20} | Dirección:{direccion:<30} | "
-                      f"Comuna:{comuna_name:<15} | Estado:{estado:<9} | Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
+                print(f"ID:{id_reporte:<3} | Tipo:{id_tipo_reporte:<3} | Descripción:{descripcion:<30} | "
+                      f"Estado:{estado:<9} | Fecha:{fecha} | Hora:{hora} | Usuario:{id_usuario} | Plaza:{id_plaza} | "
+                      f"Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
     except mysql.connector.Error as e:
         print("❌ Error en sp_listar_todos:", e)
     finally:
         if cur: cur.close()
         if cnx and cnx.is_connected(): cnx.close()
 
-def sp_borrado_logico(id_plaza: int):
+def sp_borrado_logico(id_reporte: int):
     cnx = cur = None
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        cur.callproc("sp_borrado_logico_plaza", [id_plaza])
+        cur.callproc("sp_borrado_logico_reporte", [id_reporte])
         cnx.commit()
-        print(f"✅ Borrado lógico aplicado al ID {id_plaza} (si estaba activo).")
+        print(f"✅ Borrado lógico aplicado al ID {id_reporte} (si estaba activo).")
     except mysql.connector.Error as e:
         print("❌ Error en sp_borrado_logico:", e)
         if cnx and cnx.is_connected():
@@ -98,14 +101,14 @@ def sp_borrado_logico(id_plaza: int):
         if cur: cur.close()
         if cnx and cnx.is_connected(): cnx.close()
 
-def sp_restaurar(id_plaza: int):
+def sp_restaurar(id_reporte: int):
     cnx = cur = None
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        cur.callproc("sp_restaurar_plaza", [id_plaza])
+        cur.callproc("sp_restaurar_reporte", [id_reporte])
         cnx.commit()
-        print(f"✅ Restaurado ID {id_plaza} (si estaba eliminado).")
+        print(f"✅ Restaurado ID {id_reporte} (si estaba eliminado).")
     except mysql.connector.Error as e:
         print("❌ Error en sp_restaurar:", e)
         if cnx and cnx.is_connected():
@@ -118,28 +121,28 @@ def sp_restaurar(id_plaza: int):
 # ---------------- MENÚ PRINCIPAL ----------------
 def menu():
     while True:
-        print("\n===== MENÚ PLAZAS (MySQL + SP) =====")
-        print("1) Insertar plaza")
-        print("2) Listar plazas ACTIVAS")
-        print("3) Listar plazas (TODOS)")
+        print("\n===== MENÚ REPORTES (MySQL + SP) =====")
+        print("1) Insertar reporte")
+        print("2) Listar reportes ACTIVOS")
+        print("3) Listar reportes (TODOS)")
         print("4) Borrado lógico por ID")
-        print("5) Restaurar por ID (opcional)")
+        print("5) Restaurar por ID")
         print("0) Salir")
 
         opcion = input("Selecciona una opción: ").strip()
 
         if opcion == "1":
-            nombre = input("Nombre: ").strip()
-            direccion = input("Dirección: ").strip()
             try:
-                id_comuna = int(input("ID de Comuna (opcional, 0 si no aplica): ").strip())
-                if id_comuna == 0:
-                    id_comuna = None
+                id_tipo_reporte = int(input("ID Tipo de Reporte: ").strip())
+                descripcion = input("Descripción: ").strip()
+                fecha = input("Fecha (YYYY-MM-DD): ").strip()
+                hora = input("Hora (HH:MM:SS): ").strip()
+                id_usuario = int(input("ID Usuario: ").strip())
+                id_plaza = int(input("ID Plaza: ").strip())
+                created_by = input("Creado por: ").strip()
+                sp_insertar(id_tipo_reporte, descripcion, fecha, hora, id_usuario, id_plaza, created_by)
             except ValueError:
-                print("❌ ID de comuna inválido.")
-                continue
-            created_by = input("Creado por: ").strip()
-            sp_insertar(nombre, direccion, id_comuna, created_by)
+                print("❌ Error: valores inválidos.")
 
         elif opcion == "2":
             sp_listar_activos()
@@ -149,19 +152,17 @@ def menu():
 
         elif opcion == "4":
             try:
-                id_plaza = int(input("ID a eliminar lógicamente: ").strip())
+                id_reporte = int(input("ID a eliminar lógicamente: ").strip())
+                sp_borrado_logico(id_reporte)
             except ValueError:
                 print("❌ ID inválido.")
-                continue
-            sp_borrado_logico(id_plaza)
 
         elif opcion == "5":
             try:
-                id_plaza = int(input("ID a restaurar: ").strip())
+                id_reporte = int(input("ID a restaurar: ").strip())
+                sp_restaurar(id_reporte)
             except ValueError:
                 print("❌ ID inválido.")
-                continue
-            sp_restaurar(id_plaza)
 
         elif opcion == "0":
             print("👋 Saliendo del sistema...")

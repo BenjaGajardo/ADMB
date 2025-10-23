@@ -1,8 +1,8 @@
 # ==========================================
-# sp_menu_plazas.py
+# sp_menu_juntas_vecinos.py
 # CRUD básico con Procedimientos Almacenados (MySQL) desde Python
-# Autor: Adaptado para plazas
-# Propósito: Insertar, listar, eliminar lógicamente y restaurar plazas
+# Autor: Adaptado para juntas_vecinos
+# Propósito: Insertar, listar, eliminar lógicamente y restaurar juntas de vecinos
 # utilizando procedimientos almacenados y el conector oficial de MySQL.
 # ==========================================
 
@@ -21,15 +21,15 @@ def conectar():
     return mysql.connector.connect(**DB_CONFIG)
 
 # ---------- FUNCIONES PRINCIPALES ----------
-def sp_insertar(nombre: str, direccion: str, id_comuna: int, created_by: str) -> int:
+def sp_insertar(nombre: str, id_comuna: int, created_by: str) -> int:
     cnx = cur = None
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        args = [nombre, direccion, id_comuna, created_by, 0]  # OUT al final
-        args = cur.callproc("sp_insertar_plaza", args)
+        args = [nombre, id_comuna, created_by, 0]  # OUT al final
+        args = cur.callproc("sp_insertar_junta_vecinos", args)
         cnx.commit()
-        nuevo_id = args[4]
+        nuevo_id = args[3]
         print(f"✅ Insertado correctamente. Nuevo ID: {nuevo_id}")
         return nuevo_id
     except mysql.connector.Error as e:
@@ -47,14 +47,14 @@ def sp_listar_activos():
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        cur.callproc("sp_listar_plazas_activas")
-        print("=== PLAZAS ACTIVAS ===")
+        cur.callproc("sp_listar_juntas_vecinos_activas")
+        print("=== JUNTAS DE VECINOS ACTIVAS ===")
         for result in cur.stored_results():
-            for (id_, nombre, direccion, id_comuna, comuna, created_by, created_at, updated_by, updated_at) in result.fetchall():
+            for (id_, nombre, id_comuna, created_by, created_at, updated_by, updated_at) in result.fetchall():
                 ua = updated_at if updated_at is not None else "-"
-                comuna_name = comuna if comuna is not None else "-"
-                print(f"ID:{id_:<3} | Nombre:{nombre:<20} | Dirección:{direccion:<30} | "
-                      f"Comuna:{comuna_name:<15} | Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
+                ub = updated_by if updated_by is not None else "-"
+                print(f"ID:{id_:<3} | Nombre:{nombre:<25} | Comuna ID:{id_comuna:<3} | "
+                      f"Creado por:{created_by} | Creado:{created_at} | Actualizado por:{ub} | Actualizado:{ua}")
     except mysql.connector.Error as e:
         print("❌ Error en sp_listar_activos:", e)
     finally:
@@ -66,29 +66,30 @@ def sp_listar_todos():
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        cur.callproc("sp_listar_plazas_todos")
-        print("=== PLAZAS (TODOS) ===")
+        cur.callproc("sp_listar_juntas_vecinos_todas")
+        print("=== JUNTAS DE VECINOS (TODOS) ===")
         for result in cur.stored_results():
-            for (id_, nombre, direccion, id_comuna, comuna, created_by, created_at, updated_by, updated_at, deleted) in result.fetchall():
-                estado = "ACTIVO" if deleted == 0 else "ELIMINADO"
+            for (id_, nombre, id_comuna, created_by, created_at, updated_by, updated_at, deleted) in result.fetchall():
+                estado = "ACTIVA" if deleted == 0 else "ELIMINADA"
                 ua = updated_at if updated_at is not None else "-"
-                comuna_name = comuna if comuna is not None else "-"
-                print(f"ID:{id_:<3} | Nombre:{nombre:<20} | Dirección:{direccion:<30} | "
-                      f"Comuna:{comuna_name:<15} | Estado:{estado:<9} | Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
+                ub = updated_by if updated_by is not None else "-"
+                print(f"ID:{id_:<3} | Nombre:{nombre:<25} | Comuna ID:{id_comuna:<3} | "
+                      f"Estado:{estado:<9} | Creado por:{created_by} | Creado:{created_at} | "
+                      f"Actualizado por:{ub} | Actualizado:{ua}")
     except mysql.connector.Error as e:
         print("❌ Error en sp_listar_todos:", e)
     finally:
         if cur: cur.close()
         if cnx and cnx.is_connected(): cnx.close()
 
-def sp_borrado_logico(id_plaza: int):
+def sp_borrado_logico(id_junta: int):
     cnx = cur = None
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        cur.callproc("sp_borrado_logico_plaza", [id_plaza])
+        cur.callproc("sp_borrado_logico_junta_vecinos", [id_junta])
         cnx.commit()
-        print(f"✅ Borrado lógico aplicado al ID {id_plaza} (si estaba activo).")
+        print(f"✅ Borrado lógico aplicado al ID {id_junta} (si estaba activa).")
     except mysql.connector.Error as e:
         print("❌ Error en sp_borrado_logico:", e)
         if cnx and cnx.is_connected():
@@ -98,14 +99,14 @@ def sp_borrado_logico(id_plaza: int):
         if cur: cur.close()
         if cnx and cnx.is_connected(): cnx.close()
 
-def sp_restaurar(id_plaza: int):
+def sp_restaurar(id_junta: int):
     cnx = cur = None
     try:
         cnx = conectar()
         cur = cnx.cursor()
-        cur.callproc("sp_restaurar_plaza", [id_plaza])
+        cur.callproc("sp_restaurar_junta_vecinos", [id_junta])
         cnx.commit()
-        print(f"✅ Restaurado ID {id_plaza} (si estaba eliminado).")
+        print(f"✅ Restaurado ID {id_junta} (si estaba eliminada).")
     except mysql.connector.Error as e:
         print("❌ Error en sp_restaurar:", e)
         if cnx and cnx.is_connected():
@@ -118,28 +119,25 @@ def sp_restaurar(id_plaza: int):
 # ---------------- MENÚ PRINCIPAL ----------------
 def menu():
     while True:
-        print("\n===== MENÚ PLAZAS (MySQL + SP) =====")
-        print("1) Insertar plaza")
-        print("2) Listar plazas ACTIVAS")
-        print("3) Listar plazas (TODOS)")
+        print("\n===== MENÚ JUNTAS DE VECINOS (MySQL + SP) =====")
+        print("1) Insertar junta de vecinos")
+        print("2) Listar juntas activas")
+        print("3) Listar todas las juntas")
         print("4) Borrado lógico por ID")
-        print("5) Restaurar por ID (opcional)")
+        print("5) Restaurar por ID")
         print("0) Salir")
 
         opcion = input("Selecciona una opción: ").strip()
 
         if opcion == "1":
-            nombre = input("Nombre: ").strip()
-            direccion = input("Dirección: ").strip()
+            nombre = input("Nombre de la junta: ").strip()
             try:
-                id_comuna = int(input("ID de Comuna (opcional, 0 si no aplica): ").strip())
-                if id_comuna == 0:
-                    id_comuna = None
+                id_comuna = int(input("ID de comuna: ").strip())
             except ValueError:
                 print("❌ ID de comuna inválido.")
                 continue
             created_by = input("Creado por: ").strip()
-            sp_insertar(nombre, direccion, id_comuna, created_by)
+            sp_insertar(nombre, id_comuna, created_by)
 
         elif opcion == "2":
             sp_listar_activos()
@@ -149,19 +147,19 @@ def menu():
 
         elif opcion == "4":
             try:
-                id_plaza = int(input("ID a eliminar lógicamente: ").strip())
+                id_junta = int(input("ID a eliminar lógicamente: ").strip())
             except ValueError:
                 print("❌ ID inválido.")
                 continue
-            sp_borrado_logico(id_plaza)
+            sp_borrado_logico(id_junta)
 
         elif opcion == "5":
             try:
-                id_plaza = int(input("ID a restaurar: ").strip())
+                id_junta = int(input("ID a restaurar: ").strip())
             except ValueError:
                 print("❌ ID inválido.")
                 continue
-            sp_restaurar(id_plaza)
+            sp_restaurar(id_junta)
 
         elif opcion == "0":
             print("👋 Saliendo del sistema...")
@@ -172,3 +170,4 @@ def menu():
 
 if __name__ == "__main__":
     menu()
+

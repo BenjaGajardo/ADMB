@@ -1,3 +1,8 @@
+-- ==========================================
+-- Base de datos: seguridad_plazas
+-- Tabla: personas
+-- ==========================================
+
 -- 1) Crear base y usarla
 CREATE DATABASE IF NOT EXISTS seguridad_plaza;
 USE seguridad_plaza;
