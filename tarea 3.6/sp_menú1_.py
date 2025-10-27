@@ -1,9 +1,6 @@
 # ==========================================
 # sp_menu_usuarios.py
-# CRUD básico con Procedimientos Almacenados (MySQL) desde Python
-# Autor: Adaptado para tabla usuarios
-# Propósito: Insertar, listar, eliminar lógicamente y restaurar usuarios
-# vinculados a personas y tipo_usuarios.
+# CRUD usuarios usando procedimientos almacenados en MySQL
 # ==========================================
 
 import mysql.connector
@@ -12,7 +9,7 @@ import mysql.connector
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "contrasena",
+    "password": "1234",
     "database": "seguridad_plazas"
 }
 
@@ -50,9 +47,11 @@ def sp_listar_activos():
         cur.callproc("sp_listar_usuarios_activos")
         print("=== USUARIOS ACTIVOS ===")
         for result in cur.stored_results():
-            for (id_, id_persona, contrasena, id_tipo_usuario, created_by, created_at, updated_by, updated_at) in result.fetchall():
-                ua = updated_at if updated_at is not None else "-"
-                print(f"ID:{id_:<3} | Persona ID:{id_persona} | Contraseña:{contrasena:<15} | Tipo Usuario ID:{id_tipo_usuario} | Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
+            for fila in result.fetchall():
+                id_, id_persona, contrasena, id_tipo_usuario, created_by, created_at, updated_by, updated_at = fila
+                ua = updated_at if updated_at else "-"
+                print(f"ID:{id_:<3} | Persona:{id_persona} | Contraseña:{contrasena:<15} | "
+                      f"Tipo Usuario:{id_tipo_usuario} | Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
     except mysql.connector.Error as e:
         print("❌ Error en sp_listar_activos:", e)
     finally:
@@ -67,10 +66,12 @@ def sp_listar_todos():
         cur.callproc("sp_listar_usuarios_todos")
         print("=== USUARIOS (TODOS) ===")
         for result in cur.stored_results():
-            for (id_, id_persona, contrasena, id_tipo_usuario, created_by, created_at, updated_by, updated_at, deleted) in result.fetchall():
+            for fila in result.fetchall():
+                id_, id_persona, contrasena, id_tipo_usuario, created_by, created_at, updated_by, updated_at, deleted = fila
                 estado = "ACTIVO" if deleted == 0 else "ELIMINADO"
-                ua = updated_at if updated_at is not None else "-"
-                print(f"ID:{id_:<3} | Persona ID:{id_persona} | Contraseña:{contrasena:<15} | Tipo Usuario ID:{id_tipo_usuario} | Estado:{estado:<9} | Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
+                ua = updated_at if updated_at else "-"
+                print(f"ID:{id_:<3} | Persona:{id_persona} | Contraseña:{contrasena:<15} | "
+                      f"Tipo Usuario:{id_tipo_usuario} | Estado:{estado:<9} | Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
     except mysql.connector.Error as e:
         print("❌ Error en sp_listar_todos:", e)
     finally:
@@ -84,7 +85,7 @@ def sp_borrado_logico(id_usuario: int):
         cur = cnx.cursor()
         cur.callproc("sp_borrado_logico_usuario", [id_usuario])
         cnx.commit()
-        print(f"✅ Borrado lógico aplicado al ID {id_usuario} (si estaba activo).")
+        print(f"✅ Borrado lógico aplicado al ID {id_usuario}.")
     except mysql.connector.Error as e:
         print("❌ Error en sp_borrado_logico:", e)
         if cnx and cnx.is_connected():
@@ -101,7 +102,7 @@ def sp_restaurar(id_usuario: int):
         cur = cnx.cursor()
         cur.callproc("sp_restaurar_usuario", [id_usuario])
         cnx.commit()
-        print(f"✅ Restaurado ID {id_usuario} (si estaba eliminado).")
+        print(f"✅ Usuario restaurado ID {id_usuario}.")
     except mysql.connector.Error as e:
         print("❌ Error en sp_restaurar:", e)
         if cnx and cnx.is_connected():
@@ -119,7 +120,7 @@ def menu():
         print("2) Listar usuarios ACTIVOS")
         print("3) Listar usuarios (TODOS)")
         print("4) Borrado lógico por ID")
-        print("5) Restaurar por ID (opcional)")
+        print("5) Restaurar por ID")
         print("0) Salir")
 
         opcion = input("Selecciona una opción: ").strip()

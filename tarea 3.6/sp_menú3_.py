@@ -54,13 +54,10 @@ def sp_listar_activos():
             if not filas:
                 print("❌ No hay comunas activas disponibles.")
             for fila in filas:
-                try:
-                    id_, nombre, created_by, created_at, updated_by, updated_at = fila
-                    ua = updated_at if updated_at is not None else "-"
-                    print(f"ID:{id_:<3} | Nombre:{nombre:<25} | Creado por:{created_by} | "
-                          f"Creado:{created_at} | Actualizado:{ua}")
-                except Exception as e:
-                    print("❌ Error al procesar fila:", e)
+                id_, nombre, created_by, created_at, updated_by, updated_at = fila
+                ua = updated_at if updated_at is not None else "-"
+                print(f"ID:{id_:<3} | Nombre:{nombre:<25} | Creado por:{created_by} | "
+                      f"Creado:{created_at} | Actualizado:{ua}")
     except mysql.connector.Error as e:
         print("❌ Error en sp_listar_activos:", e)
     finally:
@@ -79,14 +76,11 @@ def sp_listar_todos():
             if not filas:
                 print("❌ No hay comunas disponibles.")
             for fila in filas:
-                try:
-                    id_, nombre, created_by, created_at, updated_by, updated_at, deleted = fila
-                    estado = "ACTIVA" if deleted == 0 else "ELIMINADA"
-                    ua = updated_at if updated_at is not None else "-"
-                    print(f"ID:{id_:<3} | Nombre:{nombre:<25} | Estado:{estado:<9} | "
-                          f"Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
-                except Exception as e:
-                    print("❌ Error al procesar fila:", e)
+                id_, nombre, created_by, created_at, updated_by, updated_at, deleted = fila
+                estado = "ACTIVA" if deleted == 0 else "ELIMINADA"
+                ua = updated_at if updated_at is not None else "-"
+                print(f"ID:{id_:<3} | Nombre:{nombre:<25} | Estado:{estado:<9} | "
+                      f"Creado por:{created_by} | Creado:{created_at} | Actualizado:{ua}")
     except mysql.connector.Error as e:
         print("❌ Error en sp_listar_todos:", e)
     finally:
@@ -176,4 +170,3 @@ def menu():
 
 if __name__ == "__main__":
     menu()
-
